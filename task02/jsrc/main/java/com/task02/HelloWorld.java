@@ -27,10 +27,9 @@ public class HelloWorld implements RequestHandler<Object, Map<String,Object>> {
 	@SuppressWarnings("unchecked")
 	public Map<String,Object> handleRequest(Object input, Context context) {
 		Map<String,Object> event  = (Map<String,Object>) input;
-		String           path   = "";
-		String           method = "";
+		String             path   = "";
+		String             method = "";
 
-		// 1) For a Function URL (HTTP API v2.0), look at rawPath + requestContext.http.method:
 		if (event.get("rawPath") != null && event.get("requestContext") instanceof Map) {
 			path = (String) event.get("rawPath");
 			Map<String,Object> requestContext = (Map<String,Object>) event.get("requestContext");
@@ -39,7 +38,6 @@ public class HelloWorld implements RequestHandler<Object, Map<String,Object>> {
 				method = (String) httpSection.get("method");
 			}
 		}
-		// 2) Fallback (in case someone switches to API Gateway v1 proxy):
 		else {
 			if (event.get("path") != null) {
 				path = (String) event.get("path");
@@ -54,6 +52,9 @@ public class HelloWorld implements RequestHandler<Object, Map<String,Object>> {
 		if ("/hello".equals(path) && "GET".equalsIgnoreCase(method)) {
 			response.put("statusCode", 200);
 			response.put("message", "Hello from Lambda");
+
+			String jsonString = "{\"statusCode\":200,\"message\":\"Hello from Lambda\"}";
+			response.put("body", jsonString);
 		} else {
 			response.put("statusCode", 400);
 			String errMsg = String.format(
@@ -61,6 +62,10 @@ public class HelloWorld implements RequestHandler<Object, Map<String,Object>> {
 					path, method
 			);
 			response.put("message", errMsg);
+
+			String escaped = errMsg.replace("\\", "\\\\").replace("\"", "\\\"");
+			String jsonString = String.format("{\"statusCode\":400,\"message\":\"%s\"}", escaped);
+			response.put("body", jsonString);
 		}
 
 		return response;
