@@ -26,14 +26,11 @@ public class HelloWorld implements RequestHandler<Object, Map<String,Object>> {
 
 	@SuppressWarnings("unchecked")
 	public Map<String,Object> handleRequest(Object input, Context context) {
-		// Cast the incoming event to a Map
-		Map<String,Object> event = (Map<String,Object>) input;
+		Map<String,Object> event  = (Map<String,Object>) input;
+		String           path   = "";
+		String           method = "";
 
-		// Extract path & method (Function URL payload is HTTP API v2.0)
-		String path   = "";
-		String method = "";
-
-		// 1) If rawPath + requestContext.http.method exist, use them:
+		// 1) For a Function URL (HTTP API v2.0), look at rawPath + requestContext.http.method:
 		if (event.get("rawPath") != null && event.get("requestContext") instanceof Map) {
 			path = (String) event.get("rawPath");
 			Map<String,Object> requestContext = (Map<String,Object>) event.get("requestContext");
@@ -42,8 +39,7 @@ public class HelloWorld implements RequestHandler<Object, Map<String,Object>> {
 				method = (String) httpSection.get("method");
 			}
 		}
-		// 2) Fallback to API Gateway v1 if needed (rare for Function URLs),
-		// but we include it just in case.
+		// 2) Fallback (in case someone switches to API Gateway v1 proxy):
 		else {
 			if (event.get("path") != null) {
 				path = (String) event.get("path");
@@ -53,43 +49,20 @@ public class HelloWorld implements RequestHandler<Object, Map<String,Object>> {
 			}
 		}
 
-		// Prepare the response map:
 		Map<String,Object> response = new HashMap<>();
 
 		if ("/hello".equals(path) && "GET".equalsIgnoreCase(method)) {
-			// 200 case
 			response.put("statusCode", 200);
-
-			// Always set Content-Type if you intend to return JSON
-			Map<String,String> headers = new HashMap<>();
-			headers.put("Content-Type", "application/json");
-			response.put("headers", headers);
-
-			// Put the JSON string into "body"
-			String jsonBody = "{\"message\":\"Hello from Lambda\"}";
-			response.put("body", jsonBody);
-		}
-		else {
-			// 400 case
+			response.put("message", "Hello from Lambda");
+		} else {
 			response.put("statusCode", 400);
-
-			Map<String,String> headers = new HashMap<>();
-			headers.put("Content-Type", "application/json");
-			response.put("headers", headers);
-
 			String errMsg = String.format(
 					"Bad request syntax or unsupported method. Request path: %s. HTTP method: %s",
 					path, method
 			);
-			String jsonBody = String.format("{\"message\":\"%s\"}", escapeForJson(errMsg));
-			response.put("body", jsonBody);
+			response.put("message", errMsg);
 		}
 
 		return response;
-	}
-
-	// Helper to escape quotes/backslashes inside errMsg if needed
-	private String escapeForJson(String s) {
-		return s.replace("\\", "\\\\").replace("\"", "\\\"");
 	}
 }
